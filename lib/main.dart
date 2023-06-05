@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_displaymode/flutter_displaymode.dart';
 
-Future<void> main() async {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await FlutterDisplayMode.setHighRefreshRate();
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]).then((_) {
@@ -50,8 +50,9 @@ class Calculator extends StatefulWidget {
 
 class _CalculatorState extends State<Calculator> {
   late TextEditingController _controller;
+  List<double> _numbers = [];
+  List<String> _operations = [];
   double _result = 0;
-  String _operation = '';
 
   @override
   void initState() {
@@ -67,7 +68,8 @@ class _CalculatorState extends State<Calculator> {
           child: Center(
             child: CustomTextField(
               controller: _controller,
-              hintText: '$_result',
+              hintText: _isInteger(_result.toString()) ? _result.toInt().toString() : _result.toString(),
+              clearText: _clear,
             ),
           ),
         ),
@@ -86,12 +88,13 @@ class _CalculatorState extends State<Calculator> {
             _buildButton('*', _onOperationPressed),
             ...[1, 2, 3].map((i) => _buildButton(i.toString())),
             _buildButton('-', _onOperationPressed),
-            _buildButton('C', (_) => _clear()),
             _buildButton('0'),
+            _buildButton('.', (_) => _onDotPressed()),
             _buildButton('=', (_) => _calculateResult()),
             _buildButton('+', _onOperationPressed),
           ],
         ),
+
         const Padding(
           padding: EdgeInsets.all(20.0),
           child: Text(
@@ -114,7 +117,10 @@ class _CalculatorState extends State<Calculator> {
         style: ButtonStyle(
           overlayColor: MaterialStateProperty.all(Colors.transparent),
         ),
-        child: Text(title, style: textStyle),
+        child: Text(
+          _isInteger(title) ? int.parse(title).toString() : title,
+          style: textStyle,
+        ),
       ),
       onPressed: () => onPressed?.call(title) ?? _onNumberPressed(int.parse(title)),
     );
@@ -126,34 +132,80 @@ class _CalculatorState extends State<Calculator> {
     });
   }
 
+  void _onDotPressed() {
+    setState(() {
+      if (!_controller.text.contains('.')) {
+        _controller.text = _controller.text + '.';
+      }
+    });
+  }
+
   void _onOperationPressed(String operation) {
     setState(() {
-      _result = double.parse(_controller.text);
-      _controller.text = '';
-      _operation = operation;
+      if (_controller.text.isNotEmpty) {
+        _numbers.add(double.parse(_controller.text));
+        _controller.text = '';
+
+        if (_operations.isNotEmpty) {
+          double previousResult = _result;
+          double currentNumber = _numbers.last;
+          String previousOperation = _operations.last;
+
+          switch (previousOperation) {
+            case '+':
+              _result = previousResult + currentNumber;
+              break;
+            case '-':
+              _result = previousResult - currentNumber;
+              break;
+            case '*':
+              _result = previousResult * currentNumber;
+              break;
+            case '/':
+              _result = previousResult / currentNumber;
+              break;
+            default:
+              break;
+          }
+        } else {
+          _result = _numbers.first;
+        }
+
+        _operations.add(operation);
+      }
     });
   }
 
   void _calculateResult() {
     setState(() {
-      switch (_operation) {
-        case '+':
-          _result += double.parse(_controller.text);
-          break;
-        case '-':
-          _result -= double.parse(_controller.text);
-          break;
-        case '*':
-          _result *= double.parse(_controller.text);
-          break;
-        case '/':
-          _result /= double.parse(_controller.text);
-          break;
-        default:
-          break;
-      }
+      if (_controller.text.isNotEmpty) {
+        _numbers.add(double.parse(_controller.text));
+        _result = _numbers.first;
+        _numbers.removeAt(0);
 
-      _controller.text = _result.toString();
+        for (int i = 0; i < _operations.length; i++) {
+          switch (_operations[i]) {
+            case '+':
+              _result += _numbers[i];
+              break;
+            case '-':
+              _result -= _numbers[i];
+              break;
+            case '*':
+              _result *= _numbers[i];
+              break;
+            case '/':
+              _result /= _numbers[i];
+              break;
+            default:
+              break;
+          }
+        }
+
+        _controller.text = _isInteger(_result.toString()) ? _result.toInt().toString() : _result.toString();
+        _numbers = [];
+        _operations = [];
+      }
     });
   }
 
@@ -161,7 +213,14 @@ class _CalculatorState extends State<Calculator> {
     setState(() {
       _controller.text = '0';
       _result = 0;
+      _numbers = [];
+      _operations = [];
     });
+  }
+
+  bool _isInteger(String value) {
+    final number = num.tryParse(value);
+    return number != null && number % 1 == 0;
   }
 }
 
@@ -213,18 +272,22 @@ class ButtonContainer extends StatelessWidget {
 class CustomTextField extends StatelessWidget {
   final String hintText;
   final TextEditingController controller;
+  final VoidCallback clearText;
 
   const CustomTextField({
     Key? key,
     this.hintText = '',
     required this.controller,
+    required this.clearText,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onHorizontalDragEnd: (details) {
-        if (details.primaryVelocity!.compareTo(0) == 1) {
+        if (details.primaryVelocity!.compareTo(0) == -1) {
+          clearText();
+        } else if (details.primaryVelocity!.compareTo(0) == 1) {
           if (controller.text.isNotEmpty) {
             controller.text = controller.text.substring(0, controller.text.length - 1);
           }
