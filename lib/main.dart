@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_displaymode/flutter_displaymode.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp])
-      .then((_) {
+  await FlutterDisplayMode.setHighRefreshRate();
+  SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]).then((_) {
     runApp(const CalculatorApp());
   });
 }
@@ -26,13 +27,13 @@ class CalculatorApp extends StatelessWidget {
           backgroundColor: Colors.transparent,
           elevation: 0.0,
           title: const Text(
-              'Calculator',
-              style: TextStyle(
-                fontSize: 30.0,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFFB1B8C0),
-              )
-          )
+            'Calculator',
+            style: TextStyle(
+              fontSize: 30.0,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFFB1B8C0),
+            ),
+          ),
         ),
         body: const Calculator(),
       ),
@@ -68,7 +69,7 @@ class _CalculatorState extends State<Calculator> {
               controller: _controller,
               hintText: '$_result',
             ),
-          )
+          ),
         ),
         GridView.count(
           shrinkWrap: true,
@@ -77,6 +78,7 @@ class _CalculatorState extends State<Calculator> {
           mainAxisSpacing: 15,
           crossAxisCount: 4,
           childAspectRatio: 1.0,
+          physics: const NeverScrollableScrollPhysics(),
           children: [
             ...[7, 8, 9].map((i) => _buildButton(i.toString())),
             _buildButton('/', _onOperationPressed),
@@ -107,10 +109,14 @@ class _CalculatorState extends State<Calculator> {
 
   Widget _buildButton(String title, [Function(String)? onPressed]) {
     return ButtonContainer(
-      TextButton(
+      child: TextButton(
         onPressed: () => onPressed?.call(title) ?? _onNumberPressed(int.parse(title)),
+        style: ButtonStyle(
+          overlayColor: MaterialStateProperty.all(Colors.transparent),
+        ),
         child: Text(title, style: textStyle),
       ),
+      onPressed: () => onPressed?.call(title) ?? _onNumberPressed(int.parse(title)),
     );
   }
 
@@ -153,7 +159,7 @@ class _CalculatorState extends State<Calculator> {
 
   void _clear() {
     setState(() {
-      _controller.text = '0.0';
+      _controller.text = '0';
       _result = 0;
     });
   }
@@ -182,16 +188,24 @@ final boxDecoration = BoxDecoration(
 
 class ButtonContainer extends StatelessWidget {
   final Widget child;
+  final VoidCallback onPressed;
 
-  const ButtonContainer(this.child, {Key? key}) : super(key: key);
+  const ButtonContainer({
+    required this.child,
+    required this.onPressed,
+    Key? key,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      alignment: Alignment.center,
-      padding: const EdgeInsets.all(20),
-      decoration: boxDecoration,
-      child: child,
+    return GestureDetector(
+      onTap: onPressed,
+      child: Container(
+        alignment: Alignment.center,
+        padding: const EdgeInsets.all(20),
+        decoration: boxDecoration,
+        child: child,
+      ),
     );
   }
 }
