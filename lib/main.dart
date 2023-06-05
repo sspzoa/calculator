@@ -95,7 +95,7 @@ class _CalculatorState extends State<Calculator> {
         const Padding(
           padding: EdgeInsets.all(20.0),
           child: Text(
-            "2023 Calculator by Seungpyo. All rights reserved.",
+            "©️ 2023 Calculator by Seungpyo. All rights reserved.",
             style: TextStyle(
               fontSize: 15.0,
               fontWeight: FontWeight.bold,
