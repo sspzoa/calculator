@@ -112,16 +112,7 @@ class _CalculatorState extends State<Calculator> {
 
   Widget _buildButton(String title, [Function(String)? onPressed]) {
     return ButtonContainer(
-      child: TextButton(
-        onPressed: () => onPressed?.call(title) ?? _onNumberPressed(int.parse(title)),
-        style: ButtonStyle(
-          overlayColor: MaterialStateProperty.all(Colors.transparent),
-        ),
-        child: Text(
-          _isInteger(title) ? int.parse(title).toString() : title,
-          style: textStyle,
-        ),
-      ),
+      text: title,
       onPressed: () => onPressed?.call(title) ?? _onNumberPressed(int.parse(title)),
     );
   }
@@ -135,7 +126,7 @@ class _CalculatorState extends State<Calculator> {
   void _onDotPressed() {
     setState(() {
       if (!_controller.text.contains('.')) {
-        _controller.text = _controller.text + '.';
+        _controller.text = '${_controller.text}.';
       }
     });
   }
@@ -225,7 +216,7 @@ class _CalculatorState extends State<Calculator> {
 }
 
 const textStyle = TextStyle(
-  fontSize: 25.0,
+  fontSize: 30.0,
   fontWeight: FontWeight.bold,
   color: Color(0xFFB1B8C0),
 );
@@ -236,34 +227,32 @@ const textFieldStyle = TextStyle(
   color: Color(0xFFB1B8C0),
 );
 
-final boxDecoration = BoxDecoration(
-  color: Colors.white,
-  borderRadius: BorderRadius.circular(15.0),
-  border: Border.all(
-    color: const Color(0xFFB1B8C0).withOpacity(0.1),
-    width: 1,
-  ),
-);
-
 class ButtonContainer extends StatelessWidget {
-  final Widget child;
-  final VoidCallback onPressed;
+  final String text;
+  final Function()? onPressed;
 
   const ButtonContainer({
-    required this.child,
-    required this.onPressed,
     Key? key,
+    required this.text,
+    this.onPressed,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onPressed,
-      child: Container(
-        alignment: Alignment.center,
-        padding: const EdgeInsets.all(20),
-        decoration: boxDecoration,
-        child: child,
+    return Material(
+      borderRadius: BorderRadius.circular(25.0),
+      elevation: 3.0,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(25.0),
+        onTap: onPressed,
+        child: Container(
+          alignment: Alignment.center,
+          height: 80,
+          child: Text(
+            int.tryParse(text) != null ? int.parse(text).toString() : text,
+            style: textStyle,
+          ),
+        ),
       ),
     );
   }
@@ -293,22 +282,30 @@ class CustomTextField extends StatelessWidget {
           }
         }
       },
-      child: Padding(
-        padding: const EdgeInsets.all(30.0),
-        child: TextField(
-          controller: controller,
-          maxLines: null,
-          readOnly: true,
-          decoration: InputDecoration(
-            hintText: hintText,
-            hintStyle: textFieldStyle,
-            border: InputBorder.none,
-            alignLabelWithHint: true,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 15.0),
+        child: Material(
+          borderRadius: BorderRadius.circular(25.0),
+          elevation: 3.0,
+          child: Padding(
+            padding: const EdgeInsets.all(30.0),
+            child: TextField(
+              controller: controller,
+              maxLines: null,
+              readOnly: true,
+              decoration: InputDecoration(
+                border: InputBorder.none,
+                hintText: hintText,
+                hintStyle: textFieldStyle,
+                alignLabelWithHint: true,
+              ),
+              style: textFieldStyle,
+              textAlign: TextAlign.center,
+            ),
           ),
-          style: textFieldStyle,
-          textAlign: TextAlign.center,
         ),
       ),
     );
   }
 }
+
