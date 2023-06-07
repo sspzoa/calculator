@@ -81,7 +81,7 @@ class _CalculatorState extends State<Calculator> {
             _onNumberPressed(int.parse(keyLabel));
           } else if (keyLabel == '.') {
             _onDotPressed();
-          } else if (logicalKey == LogicalKeyboardKey.enter) {
+          } else if (logicalKey == LogicalKeyboardKey.enter || keyLabel == '=') {
             _calculateResult();
           } else if (logicalKey == LogicalKeyboardKey.backspace) {
             _removeLastCharacter();
