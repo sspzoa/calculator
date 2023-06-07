@@ -1,14 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_displaymode/flutter_displaymode.dart';
+import 'dart:io' show Platform;
+import 'package:desktop_window/desktop_window.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await FlutterDisplayMode.setHighRefreshRate();
-  SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]).then((_) {
-    runApp(const CalculatorApp());
-  });
+  if (Platform.isAndroid || Platform.isIOS) {
+    await FlutterDisplayMode.setHighRefreshRate();
+  }
+  else if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+    await DesktopWindow.setWindowSize(const Size(1080, 1880));
+  }
+  runApp(const CalculatorApp());
 }
+
 
 class CalculatorApp extends StatelessWidget {
   const CalculatorApp({Key? key}) : super(key: key);
@@ -53,62 +59,89 @@ class _CalculatorState extends State<Calculator> {
   List<double> _numbers = [];
   List<String> _operations = [];
   double _result = 0;
+  final FocusNode _focusNode = FocusNode();
 
   @override
   void initState() {
     super.initState();
     _controller = TextEditingController();
+    _focusNode.requestFocus();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Expanded(
-          child: Center(
-            child: CustomTextField(
-              controller: _controller,
-              hintText: _isInteger(_result.toString()) ? _result.toInt().toString() : _result.toString(),
-              clearText: _clear,
-            ),
-          ),
-        ),
-        GridView.count(
-          shrinkWrap: true,
-          padding: const EdgeInsets.all(15),
-          crossAxisSpacing: 15,
-          mainAxisSpacing: 15,
-          crossAxisCount: 4,
-          childAspectRatio: 1.0,
-          physics: const NeverScrollableScrollPhysics(),
-          children: [
-            ...[7, 8, 9].map((i) => _buildButton(i.toString())),
-            _buildButton('/', _onOperationPressed),
-            ...[4, 5, 6].map((i) => _buildButton(i.toString())),
-            _buildButton('*', _onOperationPressed),
-            ...[1, 2, 3].map((i) => _buildButton(i.toString())),
-            _buildButton('-', _onOperationPressed),
-            _buildButton('0'),
-            _buildButton('.', (_) => _onDotPressed()),
-            _buildButton('=', (_) => _calculateResult()),
-            _buildButton('+', _onOperationPressed),
-          ],
-        ),
+    return RawKeyboardListener(
+      focusNode: _focusNode,
+      onKey: (RawKeyEvent event) {
+        if (event is RawKeyDownEvent) {
+          final keyLabel = event.data.keyLabel;
+          final logicalKey = event.logicalKey;
 
-        const Padding(
-          padding: EdgeInsets.all(20.0),
-          child: Text(
-            "©️ 2023 Calculator by Seungpyo. All rights reserved.",
-            style: TextStyle(
-              fontSize: 15.0,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFFB1B8C0),
+          if ('0'.compareTo(keyLabel) <= 0 && keyLabel.compareTo('9') <= 0) {
+            _onNumberPressed(int.parse(keyLabel));
+          } else if (keyLabel == '.') {
+            _onDotPressed();
+          } else if (logicalKey == LogicalKeyboardKey.enter) {
+            _calculateResult();
+          } else if (logicalKey == LogicalKeyboardKey.backspace) {
+            _removeLastCharacter();
+          }else if (logicalKey == LogicalKeyboardKey.delete) {
+            _clear();
+          } else if (keyLabel == '+' || keyLabel == '-' || keyLabel == '*' || keyLabel == '/') {
+            _onOperationPressed(keyLabel);
+          }
+        }
+      },
+      child: Column(
+        children: [
+          Expanded(
+            child: Center(
+              child: CustomTextField(
+                controller: _controller,
+                hintText: _isInteger(_result.toString()) ? _result.toInt().toString() : _result.toString(),
+                clearText: _clear,
+              ),
             ),
           ),
-        ),
-      ],
+          GridView.count(
+            shrinkWrap: true,
+            padding: const EdgeInsets.all(15),
+            crossAxisSpacing: 15,
+            mainAxisSpacing: 15,
+            crossAxisCount: 4,
+            childAspectRatio: 1.0,
+            physics: const NeverScrollableScrollPhysics(),
+            children: [
+              ...[7, 8, 9].map((i) => _buildButton(i.toString())),
+              _buildButton('/', _onOperationPressed),
+              ...[4, 5, 6].map((i) => _buildButton(i.toString())),
+              _buildButton('*', _onOperationPressed),
+              ...[1, 2, 3].map((i) => _buildButton(i.toString())),
+              _buildButton('-', _onOperationPressed),
+              _buildButton('0'),
+              _buildButton('.', (_) => _onDotPressed()),
+              _buildButton('=', (_) => _calculateResult()),
+              _buildButton('+', _onOperationPressed),
+            ],
+          ),
+
+          const Padding(
+            padding: EdgeInsets.all(20.0),
+            child: Text(
+              "©️ 2023 Calculator by Seungpyo. All rights reserved.",
+              style: TextStyle(
+                fontSize: 15.0,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFFB1B8C0),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
+
+  // Remaining functions are as same as before
 
   Widget _buildButton(String title, [Function(String)? onPressed]) {
     return ButtonContainer(
@@ -209,9 +242,17 @@ class _CalculatorState extends State<Calculator> {
     });
   }
 
+  void _removeLastCharacter() {
+    if (_controller.text.isNotEmpty) {
+      setState(() {
+        _controller.text = _controller.text.substring(0, _controller.text.length - 1);
+      });
+    }
+  }
+
   bool _isInteger(String value) {
     final number = num.tryParse(value);
-    return number != null && number % 1 == 0;
+    return number != null && number.roundToDouble() == number;
   }
 }
 
